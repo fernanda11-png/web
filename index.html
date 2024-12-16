@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo de Función Lineal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: aliceblue;
+        }
+        h1 {
+            color: #333;
+        }
+        .bingo-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            max-width: 500px;
+            margin: 25px auto;
+        }
+        .bingo-cell {
+            background-color: #dbbbbb;
+            padding: 30px;
+            border: 2px solid #e0adad;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+            transition: background-color 0.3s;
+        }
+        .bingo-cell.correct {
+            background-color: green;
+            color: white;
+        }
+        .bingo-cell:hover {
+            background-color: #8499d1;
+        }
+        #popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #cce0e0;
+            padding: 20px;
+            border: 2px solid #333;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        #popup input {
+            padding: 5px;
+            font-size: 20px;
+        }
+        #overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Bingo de Función Lineal</h1>
+    <div class="bingo-board" id="bingoBoard"></div>
+
+    <!-- Popup para la pregunta -->
+    <div id="overlay"></div>
+    <div id="popup">
+        <p id="preguntaTexto"></p>
+        <input type="text" id="respuestaInput" placeholder="Tu respuesta">
+        <button onclick="verificarRespuesta()">Verificar</button>
+        <button onclick="cerrarPopup()">Cerrar</button>
+    </div>
+
+    <script>
+        const preguntasRespuestas = [
+            { pregunta: "¿Cuál es la pendiente de y = 3x + 2?", respuesta: "3" },
+            { pregunta: "Si y = 2x - 4, ¿qué valor tiene y cuando x = 3?", respuesta: "2" },
+            { pregunta: "¿Cuál es la ordenada al origen de y = -5x + 7?", respuesta: "7" },
+            { pregunta: "Si la pendiente es 4 y pasa por el origen, ¿cuál es la función?", respuesta: "y = 4x" },
+            { pregunta: "¿Qué pendiente tiene la recta y = -2x + 1?", respuesta: "-2" },
+            { pregunta: "Si la ordenada al origen es 6 y la pendiente es -1, ¿cuál es la ecuación?", respuesta: "y = -x + 6" },
+            { pregunta: "Si y = -3x + 4, ¿qué valor tiene y cuando x = -2?", respuesta: "10" },
+            { pregunta: "¿Cuál es el valor de y cuando x = 0 en y = 3x - 5?", respuesta: "-5" },
+            { pregunta: "¿Qué pendiente tiene y = 0.5x - 7?", respuesta: "0.5" },
+            { pregunta: "Si y = -2x + 3, ¿cuál es el valor de y cuando x = 2?", respuesta: "-1" },
+            { pregunta: "En y = 4x - 3, ¿cuál es la ordenada al origen?", respuesta: "-3" },
+            { pregunta: "Si y = 5x, ¿cuál es la pendiente?", respuesta: "5" },
+            { pregunta: "¿Cuál es el valor de y en y = 6x - 1 cuando x = 1?", respuesta: "5" },
+            { pregunta: "Si y = 7 - 2x, ¿cuál es el valor de y cuando x = 3?", respuesta: "1" },
+            { pregunta: "¿Cuál es la ordenada al origen en y = x + 4?", respuesta: "4" },
+            { pregunta: "En y = 3x - 7, ¿qué valor tiene y cuando x = 2?", respuesta: "-1" },
+            { pregunta: "Si la pendiente es -4, ¿cuál es la pendiente de y = -4x + 1?", respuesta: "-4" },
+            { pregunta: "Si y = -3x - 9, ¿cuál es el valor de y cuando x = 3?", respuesta: "-18" },
+            { pregunta: "¿Cuál es la pendiente de y = -5x?", respuesta: "-5" },
+            { pregunta: "Si y = 4x + 2, ¿cuál es la ordenada al origen?", respuesta: "2" },
+            { pregunta: "En y = -6x - 1, ¿qué valor tiene y cuando x = -1?", respuesta: "5" },
+            { pregunta: "Si y = 2x + 5, ¿qué valor tiene y cuando x = -2?", respuesta: "1" },
+            { pregunta: "¿Cuál es el valor de y en y = 3x + 9 cuando x = -3?", respuesta: "0" },
+            { pregunta: "En la función y = 8x + 3, ¿cuál es la pendiente?", respuesta: "8" },
+            { pregunta: "Si la ordenada al origen es -7, ¿cuál es la función de y = -7?", respuesta: "y = -7" }
+        ];
+
+        let currentCell;
+
+        function crearTableroBingo() {
+            const bingoBoard = document.getElementById("bingoBoard");
+
+            // Generar una lista de números del 1 al 25 y mezclarla aleatoriamente
+            const numeros = Array.from({ length: 25 }, (_, i) => i);
+            numeros.sort(() => Math.random() - 0.5);  // Mezcla aleatoria
+
+            // Crear cada celda con un número aleatorio de la lista mezclada
+            numeros.forEach((numero) => {
+                const cell = document.createElement("div");
+                cell.classList.add("bingo-cell");
+                cell.textContent = numero + 1;  // Asignar el número desordenado a la celda
+                cell.onclick = () => mostrarPregunta(numero, cell);
+                bingoBoard.appendChild(cell);
+            });
+        }
+
+        function mostrarPregunta(index, cell) {
+            currentCell = cell;  // Guardar la celda actual para poder cambiar el color si es correcta
+            const preguntaObj = preguntasRespuestas[index];
+            document.getElementById("preguntaTexto").textContent = preguntaObj.pregunta;
+            document.getElementById("respuestaInput").dataset.respuesta = preguntaObj.respuesta;
+            document.getElementById("popup").style.display = "block";
+            document.getElementById("overlay").style.display = "block";
+        }
+
+        function verificarRespuesta() {
+            const respuestaInput = document.getElementById("respuestaInput");
+            const respuestaCorrecta = respuestaInput.dataset.respuesta;
+
+            if (respuestaInput.value === respuestaCorrecta) {
+                alert("¡Correcto!");
+                currentCell.classList.add("correct");  // Agregar la clase para marcar en verde la celda correcta
+                cerrarPopup();
+            } else {
+                alert("Respuesta incorrecta. Inténtalo de nuevo.");
+            }
+        }
+
+        function cerrarPopup() {
+            document.getElementById("popup").style.display = "none";
+            document.getElementById("overlay").style.display = "none";
+            document.getElementById("respuestaInput").value = "";
+        }
+
+        crearTableroBingo();
+    </script>
+</body>
+</html>
